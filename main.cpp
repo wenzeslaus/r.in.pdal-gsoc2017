@@ -25,22 +25,30 @@
 #include <unistd.h>
 #include <math.h>
 #include <sys/types.h>
+
+extern "C" {
 #include <grass/gis.h>
 #include <grass/raster.h>
 #include <grass/segment.h>
 #include <grass/gprojects.h>
 #include <grass/glocale.h>
+
+#include "local_proto.h"
+#include "rast_segment.h"
+#include "point_binning.h"
+#include "filters.h"
+
+}
+
 #include <liblas/capi/liblas.h>
+
+
 #include <pdal/StageFactory.hpp>
 // #include <pdal/Options.hpp>
 #include <pdal/PipelineExecutor.hpp>
 #include <pdal/DimUtil.hpp>
 
 
-#include "local_proto.h"
-#include "rast_segment.h"
-#include "point_binning.h"
-#include "filters.h"
 
 
 int main(int argc, char *argv[])
