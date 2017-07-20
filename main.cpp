@@ -48,9 +48,7 @@ extern "C" {
 #include <pdal/PipelineExecutor.hpp>
 #include <pdal/DimUtil.hpp>
 
-
-
-
+#pragma GCC diagnostic ignored "-Wwrite-strings"
 int main(int argc, char *argv[])
 {
     int out_fd, base_raster;
@@ -833,3 +831,5 @@ int main(int argc, char *argv[])
     exit(EXIT_SUCCESS);
 
 }
+
+#pragma GCC diagnostic pop
