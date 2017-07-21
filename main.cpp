@@ -409,7 +409,7 @@ int main(int argc, char *argv[])
         /* don't if file not found */
         if (access(infile, F_OK) != 0)
             G_fatal_error(_("Input file <%s> does not exist"), infile);
-        /* Open LAS file*/
+        /* Open LAS file*/ // //
         LAS_reader = LASReader_Create(infile);
         if (LAS_reader == NULL)
             G_fatal_error(_("Unable to open file <%s> as a LiDAR point cloud"),
@@ -611,7 +611,7 @@ int main(int argc, char *argv[])
         point_binning_memory_test(&point_binning, rows, cols, rtype);
     }
 
-    /* open output map */
+    /* open output map */ // //
     out_fd = Rast_open_new(outmap, rtype);
 
     /* allocate memory for a single row of output data */
@@ -652,11 +652,14 @@ int main(int argc, char *argv[])
         /* loop of input files */
         for (i = 0; i < infiles.num_items; i++) {
             infile = infiles.items[i];
+
+            // // Open file for importing
             /* we already know file is there, so just do basic checks */
             LAS_reader = LASReader_Create(infile);
             if (LAS_reader == NULL)
                 G_fatal_error(_("Unable to open file <%s>"), infile);
 
+            // // Loop over every point
             while ((LAS_point = LASReader_GetNextPoint(LAS_reader)) != NULL) {
                 line++;
                 counter++;
@@ -753,7 +756,7 @@ int main(int argc, char *argv[])
 
                 update_value(&point_binning, &bin_index_nodes, cols,
                              arr_row, arr_col, rtype, x, y, z);
-            }                        /* while !EOF of one input file */
+            }  /* while !EOF of one input file */  // // end Loop over every point
             /* close input LAS file */
             LASReader_Destroy(LAS_reader);
         }           /* end of loop for all input files files */
