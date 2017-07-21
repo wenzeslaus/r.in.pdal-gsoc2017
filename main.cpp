@@ -25,6 +25,8 @@
 #include <unistd.h>
 #include <math.h>
 #include <sys/types.h>
+#include <iostream>
+#include <string>
 
 extern "C" {
 #include <grass/gis.h>
@@ -48,6 +50,8 @@ extern "C" {
 #include <pdal/PipelineExecutor.hpp>
 #include <pdal/DimUtil.hpp>
 #include "pipelinejson.hpp"
+
+using namespace std;
 
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 int main(int argc, char *argv[])
@@ -666,105 +670,115 @@ int main(int argc, char *argv[])
                 G_fatal_error(_("Unable to open file <%s>"), infile);
 
             uint64_t pointCount = pipeline->execute();
+            pdal::PipelineManager &mgr = pipeline->getManager();
 
             // // Loop over every point
-            while ((LAS_point = LASReader_GetNextPoint(LAS_reader)) != NULL) {
-                line++;
-                counter++;
+            // while ((LAS_point = LASReader_GetNextPoint(LAS_reader)) != NULL) {
+            auto views = mgr.views();
+            for (auto const& view : views){
+                for (uint64_t idx = 0; idx < pointCount; ++idx) {
+                    line++;
+                    counter++;
 
-                if (counter == 100000) {        /* speed */
-                    if (line < estimated_lines)
-                        G_percent(line, estimated_lines, 3);
-                    counter = 0;
-                }
+                    if (counter == 100000) {        /* speed */
+                        if (line < estimated_lines)
+                            G_percent(line, estimated_lines, 3);
+                        counter = 0;
+                    }
 
-                /* We always count them and report because behavior
-                 * changed in between 7.0 and 7.2 from undefined (but skipping
-                 * invalid points) to filtering them out only when requested. */
-                if (!LASPoint_IsValid(LAS_point)) {
-                    n_invalid++;
-                    if (only_valid)
-                        continue;
-                }
+                    /* We always count them and report because behavior
+                     * changed in between 7.0 and 7.2 from undefined (but skipping
+                     * invalid points) to filtering them out only when requested. */
+                    if (!LASPoint_IsValid(LAS_point)) {
+                        n_invalid++;
+                        if (only_valid)
+                            continue;
+                    }
 
-                x = LASPoint_GetX(LAS_point);
-                y = LASPoint_GetY(LAS_point);
-                if (intens_flag->answer)
-                    /* use intensity as z here to allow all filters (and
-                     * modifications) below to be applied for intensity */
-                    z = LASPoint_GetIntensity(LAS_point);
-                else
-                    z = LASPoint_GetZ(LAS_point);
-
-                int return_n = LASPoint_GetReturnNumber(LAS_point);
-                int n_returns = LASPoint_GetNumberOfReturns(LAS_point);
-                if (return_filter_is_out(&return_filter_struct, return_n, n_returns)) {
-                    n_filtered++;
-                    continue;
-                }
-                point_class = (int) LASPoint_GetClassification(LAS_point);
-                if (class_filter_is_out(&class_filter, point_class))
-                    continue;
-
-                if (y <= region.south || y > region.north) {
-                    continue;
-                }
-                if (x < region.west || x >= region.east) {
-                    continue;
-                }
-
-                /* find the bin in the current array box */
-                arr_row = (int)((region.north - y) / region.ns_res) - row0;
-                if (arr_row < 0 || arr_row >= rows)
-                    continue;
-                arr_col = (int)((x - region.west) / region.ew_res);
-
-                z = z * zscale;
-
-                if (base_array) {
-                    double base_z;
-                    if (row_array_get_value_row_col(base_array, arr_row, arr_col,
-                                                    cols, base_raster_data_type,
-                                                    &base_z))
-                        z -= base_z;
+                    // x = LASPoint_GetX(LAS_point);
+                    // y = LASPoint_GetY(LAS_point);
+                    x = view->getFieldAs<double>(pdal::Dimension::Id::X, idx);
+                    y = view->getFieldAs<double>(pdal::Dimension::Id::Y, idx);
+                    if (intens_flag->answer)
+                        /* use intensity as z here to allow all filters (and
+                         * modifications) below to be applied for intensity */
+                        z = view->getFieldAs<double>(pdal::Dimension::Id::Intensity, idx);
                     else
-                        continue;
-                }
-                else if (use_segment) {
-                    double base_z;
-                    if (rast_segment_get_value_xy(&base_segment, &input_region,
-                                                  base_raster_data_type, x, y,
-                                                  &base_z))
-                        z -= base_z;
-                    else
-                        continue;
-                }
+                        z = view->getFieldAs<double>(pdal::Dimension::Id::Z, idx);
 
-                if (zrange_opt->answer) {
-                    if (z < zrange_min || z > zrange_max) {
+                    int return_n = view->getFieldAs<int>(pdal::Dimension::Id::ReturnNumber, idx);
+                    int n_returns = view->getFieldAs<int>(pdal::Dimension::Id::NumberOfReturns, idx);
+                    if (return_filter_is_out(&return_filter_struct, return_n, n_returns)) {
+                        n_filtered++;
                         continue;
                     }
-                }
+                    point_class = view->getFieldAs<int>(pdal::Dimension::Id::Classification, idx);
+                    cout << x << ", " << y << ", " << z
+                        << ", R#: " << return_n << ", Cls: " << point_class << endl;
+                    if (class_filter_is_out(&class_filter, point_class))
+                        continue;
 
-                if (intens_import_flag->answer || irange_opt->answer) {
-                    intensity = LASPoint_GetIntensity(LAS_point);
-                    intensity *= iscale;
-                    if (irange_opt->answer) {
-                        if (intensity < irange_min || intensity > irange_max) {
+                    if (y <= region.south || y > region.north) {
+                        continue;
+                    }
+                    if (x < region.west || x >= region.east) {
+                        continue;
+                    }
+
+                    /* find the bin in the current array box */
+                    arr_row = (int)((region.north - y) / region.ns_res) - row0;
+                    if (arr_row < 0 || arr_row >= rows)
+                        continue;
+                    arr_col = (int)((x - region.west) / region.ew_res);
+
+                    z = z * zscale;
+
+                    if (base_array) {
+                        double base_z;
+                        if (row_array_get_value_row_col(base_array, arr_row, arr_col,
+                                                        cols, base_raster_data_type,
+                                                        &base_z))
+                            z -= base_z;
+                        else
+                            continue;
+                    }
+                    else if (use_segment) {
+                        double base_z;
+                        if (rast_segment_get_value_xy(&base_segment, &input_region,
+                                                      base_raster_data_type, x, y,
+                                                      &base_z))
+                            z -= base_z;
+                        else
+                            continue;
+                    }
+
+                    if (zrange_opt->answer) {
+                        if (z < zrange_min || z > zrange_max) {
                             continue;
                         }
                     }
-                    /* use intensity for statistics */
-                    if (intens_import_flag->answer)
-                        z = intensity;
+
+                    if (intens_import_flag->answer || irange_opt->answer) {
+                        intensity = LASPoint_GetIntensity(LAS_point);
+                        intensity *= iscale;
+                        if (irange_opt->answer) {
+                            if (intensity < irange_min || intensity > irange_max) {
+                                continue;
+                            }
+                        }
+                        /* use intensity for statistics */
+                        if (intens_import_flag->answer)
+                            z = intensity;
+                    }
+
+                    count++;
+                    /*          G_debug(5, "x: %f, y: %f, z: %f", x, y, z); */
+
+                    update_value(&point_binning, &bin_index_nodes, cols,
+                                 arr_row, arr_col, rtype, x, y, z);
                 }
-
-                count++;
-                /*          G_debug(5, "x: %f, y: %f, z: %f", x, y, z); */
-
-                update_value(&point_binning, &bin_index_nodes, cols,
-                             arr_row, arr_col, rtype, x, y, z);
-            }  /* while !EOF of one input file */  // // end Loop over every point
+            }
+            /* while !EOF of one input file */  // // end Loop over every point
             /* close input LAS file */
             LASReader_Destroy(LAS_reader);
         }           /* end of loop for all input files files */
