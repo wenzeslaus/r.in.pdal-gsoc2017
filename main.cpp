@@ -47,6 +47,7 @@ extern "C" {
 // #include <pdal/Options.hpp>
 #include <pdal/PipelineExecutor.hpp>
 #include <pdal/DimUtil.hpp>
+#include "pipelinejson.hpp"
 
 #pragma GCC diagnostic ignored "-Wwrite-strings"
 int main(int argc, char *argv[])
@@ -621,7 +622,7 @@ int main(int argc, char *argv[])
 
     count_total = line_total = 0;
 
-    /* main binning loop(s) */
+    /* main binning loop(s) */ // //
     for (pass = 1; pass <= npasses; pass++) {
 
         if (npasses > 1)
@@ -653,11 +654,18 @@ int main(int argc, char *argv[])
         for (i = 0; i < infiles.num_items; i++) {
             infile = infiles.items[i];
 
+            std::string pipeline_json =
+                        pipelineJson::basicVectorMapReaderWriter(infile,outmap);
+
             // // Open file for importing
+            auto pipeline = new pdal::PipelineExecutor(pipeline_json);
+
             /* we already know file is there, so just do basic checks */
             LAS_reader = LASReader_Create(infile);
             if (LAS_reader == NULL)
                 G_fatal_error(_("Unable to open file <%s>"), infile);
+
+            uint64_t pointCount = pipeline->execute();
 
             // // Loop over every point
             while ((LAS_point = LASReader_GetNextPoint(LAS_reader)) != NULL) {
