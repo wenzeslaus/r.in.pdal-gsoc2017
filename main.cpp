@@ -42,9 +42,6 @@ extern "C" {
 
 }
 
-#include <liblas/capi/liblas.h>
-
-
 #include <pdal/StageFactory.hpp>
 // #include <pdal/Options.hpp>
 #include <pdal/PipelineExecutor.hpp>
@@ -112,7 +109,7 @@ int main(int argc, char *argv[])
     LASReaderH LAS_reader;
     LASHeaderH LAS_header;
     LASSRSH LAS_srs;
-    LASPointH LAS_point;
+    // LASPointH LAS_point;
     int return_filter;
 
     const char *projstr;
@@ -458,12 +455,11 @@ int main(int argc, char *argv[])
         estimated_lines += LASHeader_GetPointRecordsCount(LAS_header);
         /* We are closing all again and we will be opening them later,
          * so we don't have to worry about limit for open files. */
-        LASSRS_Destroy(LAS_srs);
         LASHeader_Destroy(LAS_header);
         LASReader_Destroy(LAS_reader);
     }
     /* if we are not importing, end */
-    if (print_flag->answer || scan_flag->answer)
+    if (scan_flag->answer)  // || print_flag->answer
         exit(EXIT_SUCCESS);
 
     return_filter = LAS_ALL;
@@ -671,9 +667,12 @@ int main(int argc, char *argv[])
 
             uint64_t pointCount = pipeline->execute();
             pdal::PipelineManager &mgr = pipeline->getManager();
+            if (print_flag->answer){
+                //fprintf(stdout, pipeline->getMetadata().c_str());
+                continue;
+            }
 
             // // Loop over every point
-            // while ((LAS_point = LASReader_GetNextPoint(LAS_reader)) != NULL) {
             auto views = mgr.views();
             for (auto const& view : views){
                 for (uint64_t idx = 0; idx < pointCount; ++idx) {
@@ -689,14 +688,16 @@ int main(int argc, char *argv[])
                     /* We always count them and report because behavior
                      * changed in between 7.0 and 7.2 from undefined (but skipping
                      * invalid points) to filtering them out only when requested. */
+                    /* commented out because it is scheduled to be eliminated * /
                     if (!LASPoint_IsValid(LAS_point)) {
                         n_invalid++;
                         if (only_valid)
                             continue;
                     }
+                    /* at this time, I don't know where I might have a dataset
+                        where one or more points fail this check, so I can't
+                        test it or figure out what the pdal equivalent is. */
 
-                    // x = LASPoint_GetX(LAS_point);
-                    // y = LASPoint_GetY(LAS_point);
                     x = view->getFieldAs<double>(pdal::Dimension::Id::X, idx);
                     y = view->getFieldAs<double>(pdal::Dimension::Id::Y, idx);
                     if (intens_flag->answer)
@@ -713,8 +714,8 @@ int main(int argc, char *argv[])
                         continue;
                     }
                     point_class = view->getFieldAs<int>(pdal::Dimension::Id::Classification, idx);
-                    cout << x << ", " << y << ", " << z
-                        << ", R#: " << return_n << ", Cls: " << point_class << endl;
+                    // cout << x << ", " << y << ", " << z
+                       // << ", R#: " << return_n << ", Cls: " << point_class << endl;
                     if (class_filter_is_out(&class_filter, point_class))
                         continue;
 
@@ -759,7 +760,7 @@ int main(int argc, char *argv[])
                     }
 
                     if (intens_import_flag->answer || irange_opt->answer) {
-                        intensity = LASPoint_GetIntensity(LAS_point);
+                        intensity = view->getFieldAs<double>(pdal::Dimension::Id::Intensity, idx);
                         intensity *= iscale;
                         if (irange_opt->answer) {
                             if (intensity < irange_min || intensity > irange_max) {
