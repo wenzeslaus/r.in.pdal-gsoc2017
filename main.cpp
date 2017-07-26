@@ -46,6 +46,7 @@ extern "C" {
 // #include <pdal/Options.hpp>
 #include <pdal/PipelineExecutor.hpp>
 #include <pdal/DimUtil.hpp>
+#include <pdal/util/Utils.hpp>
 #include "pipelinejson.hpp"
 
 using namespace std;
@@ -376,6 +377,10 @@ int main(int argc, char *argv[])
         set_region_flag->answer = '\0';
     }
 
+    std::string pipelineJsonOutFile = "";
+    /* ToDo: Add new option for writeJson=. */
+    pipelineJsonOutFile = "/media/user/d/Datasets/misc/pipelineOut.json";
+
     struct StringList infiles;
 
     if (file_list_opt->answer) {
@@ -651,6 +656,11 @@ int main(int argc, char *argv[])
 
             // // Open file for importing
             auto plExecutor = new pdal::PipelineExecutor(pipeline_json);
+            if(!plExecutor->validate()){
+                cout << "The pdal pipeline being used is not valid." << endl;
+                cout << "Processing of the point cloud not performed." << endl;
+                continue;
+            }
 
             /* we already know file is there, so just do basic checks */
             LAS_reader = LASReader_Create(infile);
@@ -658,19 +668,26 @@ int main(int argc, char *argv[])
                 G_fatal_error(_("Unable to open file <%s>"), infile);
 
             uint64_t pointCount = plExecutor->execute();
+            if(pointCount > 0 && pipelineJsonOutFile.length() > 0) {
+                std::ofstream outjson(pipelineJsonOutFile);
+                outjson << pipeline_json;
+                outjson.close();
+            }
 
-            //if (print_flag->answer){
-            //    pdal::MetadataNode root = plExecutor->getMetadata();
-            //    //auto root = pipeline->getMetadata();
-            //    auto srsNode = root.findChild("srs");
-            //    //auto aNode = metaData.getNode(s);
-            //    cout << "test 1" << endl;
-            //    auto val = root.valid();
-            //    cout << "test 2" << endl;
-            //    cout << val << endl;
-            //    cout << "test 3" << endl;
-            //    continue;
-            //}
+            if (print_flag->answer){  /* * /
+                pdal::MetadataNode root = plExecutor->getMetadata();
+                //auto root = pipeline->getMetadata();
+                auto srsNode = root.findChild("srs");
+                pdal::MetadataNodeList aNodeList = srsNode.children();
+                cout << "  test 1" << endl;
+                auto val = aNodeList.size();
+                cout << val << endl;
+                cout << "  test 2" << endl;
+                //cout << pdal::Utils::toJSON(root) << endl;
+                cout << "  test 3" << endl; /* */
+                cout << "-p flag used, so no output file generated." << endl;
+                continue;
+            }
 
             // // Loop over every point
             pdal::PipelineManager &mgr = plExecutor->getManager();
