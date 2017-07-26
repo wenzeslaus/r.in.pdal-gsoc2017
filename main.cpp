@@ -421,17 +421,8 @@ int main(int argc, char *argv[])
             G_fatal_error(_("Unable to read LAS header of <%s>"), infile);
         }
 
-        LAS_srs = LASHeader_GetSRS(LAS_header);
-
-        /* print info or check projection if we are actually importing */
-        if (print_flag->answer) {
-            /* print filename when there is more than one file */
-            if (infiles.num_items > 1)
-                fprintf(stdout, "File: %s\n", infile);
-            /* Print LAS header */
-            print_lasinfo(LAS_header, LAS_srs);
-        }
-        else {
+        /* check projection if we are actually importing */
+        if (!print_flag->answer){
             /* report that we are checking more files */
             if (i == 1)
                 G_message(_("First file's projection checked,"
@@ -613,7 +604,8 @@ int main(int argc, char *argv[])
     }
 
     /* open output map */ // //
-    out_fd = Rast_open_new(outmap, rtype);
+    if (!print_flag->answer)
+        out_fd = Rast_open_new(outmap, rtype);
 
     /* allocate memory for a single row of output data */
     raster_row = Rast_allocate_output_buf(rtype);
@@ -658,21 +650,30 @@ int main(int argc, char *argv[])
                         pipelineJson::basicVectorMapReaderWriter(infile,outmap);
 
             // // Open file for importing
-            auto pipeline = new pdal::PipelineExecutor(pipeline_json);
+            auto plExecutor = new pdal::PipelineExecutor(pipeline_json);
 
             /* we already know file is there, so just do basic checks */
             LAS_reader = LASReader_Create(infile);
             if (LAS_reader == NULL)
                 G_fatal_error(_("Unable to open file <%s>"), infile);
 
-            uint64_t pointCount = pipeline->execute();
-            pdal::PipelineManager &mgr = pipeline->getManager();
-            if (print_flag->answer){
-                //fprintf(stdout, pipeline->getMetadata().c_str());
-                continue;
-            }
+            uint64_t pointCount = plExecutor->execute();
+
+            //if (print_flag->answer){
+            //    pdal::MetadataNode root = plExecutor->getMetadata();
+            //    //auto root = pipeline->getMetadata();
+            //    auto srsNode = root.findChild("srs");
+            //    //auto aNode = metaData.getNode(s);
+            //    cout << "test 1" << endl;
+            //    auto val = root.valid();
+            //    cout << "test 2" << endl;
+            //    cout << val << endl;
+            //    cout << "test 3" << endl;
+            //    continue;
+            //}
 
             // // Loop over every point
+            pdal::PipelineManager &mgr = plExecutor->getManager();
             auto views = mgr.views();
             for (auto const& view : views){
                 for (uint64_t idx = 0; idx < pointCount; ++idx) {
@@ -784,22 +785,25 @@ int main(int argc, char *argv[])
             LASReader_Destroy(LAS_reader);
         }           /* end of loop for all input files files */
 
-        G_percent(1, 1, 1);	/* flush */
+        if(!print_flag->answer)
+            G_percent(1, 1, 1);	/* flush */
         G_debug(2, "pass %d finished, %lu coordinates in box", pass, count);
         count_total += count;
         line_total += line;
 
-        /* calc stats and output */
-        G_message(_("Writing output raster map..."));
-        for (row = 0; row < rows; row++) {
-            /* potentially vector writing can be independent on the binning */
-            write_values(&point_binning, &bin_index_nodes, raster_row, row,
-                         cols, rtype, NULL);
+        if(!print_flag->answer) {
+            /* calc stats and output */
+            G_message(_("Writing output raster map..."));
+            for (row = 0; row < rows; row++) {
+                /* potentially vector writing can be independent on the binning */
+                write_values(&point_binning, &bin_index_nodes, raster_row, row,
+                             cols, rtype, NULL);
 
-            G_percent(row, rows, 10);
+                G_percent(row, rows, 10);
 
-            /* write out line of raster data */
-            Rast_put_row(out_fd, raster_row, rtype);
+                /* write out line of raster data */
+                Rast_put_row(out_fd, raster_row, rtype);
+            }
         }
 
         /* free memory */
@@ -810,19 +814,22 @@ int main(int argc, char *argv[])
     if (use_segment)
         Segment_close(&base_segment);
 
-    G_percent(1, 1, 1);		/* flush */
     G_free(raster_row);
+    if(print_flag->answer) {
+        exit(EXIT_SUCCESS);
+    }
 
+    G_percent(1, 1, 1);		/* flush */
     G_message(_("%lu points found in input file(s)"), line_total);
 
     /* close raster file & write history */
     Rast_close(out_fd);
-
     sprintf(title, "Raw X,Y,Z data binned into a raster grid by cell %s",
             method_opt->answer);
     Rast_put_cell_title(outmap, title);
-
     Rast_short_history(outmap, "raster", &history);
+
+
     Rast_command_history(&history);
     Rast_set_history(&history, HIST_DATSRC_1, infile);
     Rast_write_history(outmap, &history);
