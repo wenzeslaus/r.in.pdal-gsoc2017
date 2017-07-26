@@ -648,6 +648,7 @@ int main(int argc, char *argv[])
         G_percent_reset();
 
         pipelineJsonAdapter* adaptr = new pipelineJsonAdapter(infiles.items[0]);
+        cout << adaptr->GetJsonString() << endl;
         int testing = 0;
 
         /* loop of input files */
@@ -679,12 +680,13 @@ int main(int argc, char *argv[])
 
             if (print_flag->answer){  /* * /
                 pdal::MetadataNode root = plExecutor->getMetadata();
-                //auto root = pipeline->getMetadata();
-                auto srsNode = root.findChild("srs");
+                //auto somem = root.name();
+                //cout << "what" << end;
+                auto srsNode = root.findChild("metadata");
                 pdal::MetadataNodeList aNodeList = srsNode.children();
                 cout << "  test 1" << endl;
-                auto val = aNodeList.size();
-                cout << val << endl;
+                auto val = srsNode.name();
+                cout << "val is " << val << "." << endl;
                 cout << "  test 2" << endl;
                 //cout << pdal::Utils::toJSON(root) << endl;
                 cout << "  test 3" << endl; /* */

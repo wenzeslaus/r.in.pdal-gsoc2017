@@ -4,13 +4,35 @@
 using namespace std;
 
 
-pipelineJson::pipelineJson()
+pipelineJsonAdapter::pipelineJsonAdapter()
 {
 
 }
 
 #pragma GCC diagnostic ignored "-Wwrite-strings"
-string pipelineJson::enquote(char* str){
+
+pipelineJsonAdapter::pipelineJsonAdapter(string inputFileName)
+{
+
+}
+
+string pipelineJsonAdapter::GetJsonString()
+{
+    stringstream s;
+
+    // write opening lines
+    s <<
+         "{" << endl <<
+         "   \"pipeline\":[" << endl;
+
+    // write closing lines
+    s << "   ]" << endl <<
+         "}" << endl;
+
+    return s.str();
+}
+
+string pipelineJsonAdapter::enquote(char* str){
     std::ostringstream s;
     s << "\"" << str << "\"";
 
@@ -18,7 +40,7 @@ string pipelineJson::enquote(char* str){
 
 }
 
-string pipelineJson::basicReaderWriter(char* inFile, char* outFile){
+string pipelineJsonAdapter::basicReaderWriter(char* inFile, char* outFile){
     std::ostringstream s;
     s <<
          "{" <<
@@ -35,7 +57,7 @@ string pipelineJson::basicReaderWriter(char* inFile, char* outFile){
 
 }
 
-string pipelineJson::basicVectorMapReaderWriter(char* inFile, char* outFile){
+string pipelineJsonAdapter::basicVectorMapReaderWriter(char* inFile, char* outFile){
     std::ostringstream s;
     s <<
          "{" <<

@@ -9,6 +9,7 @@ public:
 
 public:
     pipelineJsonAdapter(std::string inputFileName);
+    std::string GetJsonString();
 
     static std::string basicReaderWriter(char* inFile, char* outFile);
     static std::string basicVectorMapReaderWriter(char* inFile, char* outFile);
