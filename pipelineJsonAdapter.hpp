@@ -1,11 +1,14 @@
-#ifndef PIPELINEJSON_H
-#define PIPELINEJSON_H
+#ifndef PIPELINEJSONADAPTER_H
+#define PIPELINEJSONADAPTER_H
 #include <string>
 
-class pipelineJson
+class pipelineJsonAdapter
 {
 public:
-    pipelineJson();
+    pipelineJsonAdapter();
+
+public:
+    pipelineJsonAdapter(std::string inputFileName);
 
     static std::string basicReaderWriter(char* inFile, char* outFile);
     static std::string basicVectorMapReaderWriter(char* inFile, char* outFile);
@@ -15,4 +18,4 @@ private:
 
 };
 
-#endif // PIPELINEJSON_H
+#endif // PIPELINEJSONADAPTER_H

@@ -47,7 +47,7 @@ extern "C" {
 #include <pdal/PipelineExecutor.hpp>
 #include <pdal/DimUtil.hpp>
 #include <pdal/util/Utils.hpp>
-#include "pipelinejson.hpp"
+#include "pipelineJsonAdapter.hpp"
 
 using namespace std;
 
@@ -647,12 +647,15 @@ int main(int argc, char *argv[])
         counter = 0;
         G_percent_reset();
 
+        pipelineJsonAdapter* adaptr = new pipelineJsonAdapter(infiles.items[0]);
+        int testing = 0;
+
         /* loop of input files */
         for (i = 0; i < infiles.num_items; i++) {
             infile = infiles.items[i];
 
             std::string pipeline_json =
-                        pipelineJson::basicVectorMapReaderWriter(infile,outmap);
+                        pipelineJsonAdapter::basicVectorMapReaderWriter(infile,outmap);
 
             // // Open file for importing
             auto plExecutor = new pdal::PipelineExecutor(pipeline_json);

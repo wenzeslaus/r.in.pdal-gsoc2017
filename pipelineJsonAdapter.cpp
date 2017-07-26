@@ -1,5 +1,5 @@
 #include <sstream>
-#include "pipelinejson.hpp"
+#include "pipelineJsonAdapter.hpp"
 
 using namespace std;
 
