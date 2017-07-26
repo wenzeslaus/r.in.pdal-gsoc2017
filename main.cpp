@@ -647,8 +647,13 @@ int main(int argc, char *argv[])
         counter = 0;
         G_percent_reset();
 
+        std::string pipeline_json =
+                    pipelineJsonAdapter::basicVectorMapReaderWriter(infiles.items[0],outmap);
+        cout << pipeline_json << endl << endl;
+
         pipelineJsonAdapter* adaptr = new pipelineJsonAdapter(infiles.items[0]);
-        cout << adaptr->GetJsonString() << endl;
+        cout << adaptr->GetJsonString() << endl;  cout.flush();
+        pipeline_json = adaptr->GetJsonString()
         int testing = 0;
 
         /* loop of input files */

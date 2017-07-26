@@ -3,17 +3,24 @@
 
 using namespace std;
 
+#pragma GCC diagnostic ignored "-Wwrite-strings"
+
+string enquotee(string str){
+    std::ostringstream s;
+    s << "\"" << str << "\"";
+
+    return s.str();
+
+}
 
 pipelineJsonAdapter::pipelineJsonAdapter()
 {
 
 }
 
-#pragma GCC diagnostic ignored "-Wwrite-strings"
-
 pipelineJsonAdapter::pipelineJsonAdapter(string inputFileName)
 {
-
+    this->inputFiles.push_back(inputFileName);
 }
 
 string pipelineJsonAdapter::GetJsonString()
@@ -24,6 +31,14 @@ string pipelineJsonAdapter::GetJsonString()
     s <<
          "{" << endl <<
          "   \"pipeline\":[" << endl;
+
+    // write input files
+    for(auto it = this->inputFiles.begin(); it != this->inputFiles.end(); it++){
+        s <<
+             "   " << enquotee(*it)  << endl;
+    }
+
+
 
     // write closing lines
     s << "   ]" << endl <<
